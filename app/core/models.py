@@ -6,7 +6,7 @@ from django.contrib.auth.models import AbstractBaseUser, \
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email, password, **extra_fields):
         """Creates and saves a new user"""
         if not email:
             raise ValueError("Users must provide valid email addresses.")
@@ -16,7 +16,7 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_super_user(self, email, password):
+    def create_superuser(self, email, password):
         """Creates and saves a new super user"""
         user = self.model(email=email, password=password)
         user.is_staff = True
