@@ -8,6 +8,7 @@ from rest_framework import status
 
 CREATE_USER_URL = reverse("user:create")
 TOKEN_URL = reverse("user:token")
+ME_URL = reverse("user:me")
 
 
 def create_user(**params):
@@ -114,3 +115,50 @@ class PublicUserAPITests(TestCase):
 
         self.assertNotIn("token", res.data)
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_user_unauthorized(self):
+        """Tests that authorization is required for user view"""
+        res = self.client.get(ME_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PrivateUserAPITests(TestCase):
+    """Tests the user API Client that requires authentification"""
+
+    def setUp(self):
+        self.user = create_user(
+            email="salut@modulo.fr",
+            password="password123",
+            name="Michel Salut"
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrieve_profile_is_successful(self):
+        """Tests authenticated user can retrieve profile successfully"""
+        res = self.client.get(ME_URL)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data, {
+            "name": self.user.name,
+            "email": self.user.email
+        })
+
+    def test_post_not_allowed_on_me(self):
+        """Tests that POST method is not allowed on me url"""
+        res = self.client.post(ME_URL, {})
+
+        self.assertEqual(res.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_update_user_profile_successful(self):
+        """Tests that an authenticated user can update their profile"""
+        payload = {"name": "Michelle Salut", "password": "newpass123"}
+
+        res = self.client.patch(ME_URL, payload)
+
+        self.user.refresh_from_db()
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.user.name, payload["name"])
+        self.assertTrue(self.user.check_password(payload["password"]))
