@@ -19,6 +19,7 @@ class PublicTagsAPITests(TestCase):
         self.client = APIClient()
 
     def test_login_required_for_tags(self):
+        """Tests that authentication is required for retrieving tags"""
         res = self.client.get(TAGS_URL)
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -61,3 +62,22 @@ class PrivateTagsAPITests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]["name"], tag.name)
+
+    def test_tag_creation(self):
+        """Tests that tags are created correctly"""
+        payload = {"name": "Test tag"}
+        self.client.post(TAGS_URL, payload)
+
+        tag_exists = Tag.objects.filter(
+            name=payload["name"],
+            user=self.user
+        ).exists()
+
+        self.assertTrue(tag_exists)
+
+    def test_tag_invalid_name_not_created(self):
+        """Tests that a non-empty string is passed as a tag name"""
+        payload = {"name": ""}
+        res = self.client.post(TAGS_URL, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
